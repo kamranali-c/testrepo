@@ -1,14 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
 import TaskTable from './TaskTable';
 
-test('finds "Job ID" in one of the containers', () => {
+test('finds multiple column headers in containers', () => {
   render(<TaskTable />);
 
   const containers = screen.getAllByRole('presentation');
 
-  const found = containers.some((container) =>
-    within(container).queryByText('Job ID')
-  );
+  const expectedTexts = ['Job ID', 'Status', 'Submitted Time'];
 
-  expect(found).toBe(true);
+  expectedTexts.forEach((text) => {
+    const found = containers.some((container) =>
+      within(container).queryByText((content) => content.includes(text))
+    );
+    expect(found).toBe(true);
+  });
 });
