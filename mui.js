@@ -1,24 +1,37 @@
 import React from "react";
-import { screen } from "@testing-library/react";
-import { render } from "test/test-utils";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import CustomDatePicker from "./CustomDatePicker";
+import DateRangeInput from "./DateRangeInput"; // Adjust path as needed
 
-test("selects July 1st using class 'react-datepicker__day--001'", async () => {
-  const date = new Date(2022, 4, 7); // Initial date
+test("calls applyValue with adjusted start and end dates", async () => {
+  const applyValue = jest.fn();
+  const item = [];
 
-  render(<CustomDatePicker date={date} />);
+  render(<DateRangeInput item={item} applyValue={applyValue} />);
 
   // Open the date picker
   await userEvent.click(screen.getByRole("button"));
 
-  // Select the day with class 'react-datepicker__day--001'
-  const day = document.querySelector(".react-datepicker__day--001");
-  expect(day).toBeInTheDocument();
-  if (day) {
-    await userEvent.click(day);
+  // Select July 1st
+  const startDay = document.querySelector(".react-datepicker__day--001");
+  expect(startDay).toBeInTheDocument();
+  if (startDay) {
+    await userEvent.click(startDay);
   }
 
-  // Optional: assert that the input now shows July 1st
-  // expect(screen.getByRole("textbox")).toHaveValue("07/01/2025"); // Adjust format as needed
+  // Select July 2nd
+  const endDay = document.querySelector(".react-datepicker__day--002");
+  expect(endDay).toBeInTheDocument();
+  if (endDay) {
+    await userEvent.click(endDay);
+  }
+
+  // Wait for applyValue to be called
+  await waitFor(() => {
+    expect(applyValue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        value: "2025-07-02:2025-07-03", // Adjusted by +1 day in useEffect
+      })
+    );
+  });
 });
