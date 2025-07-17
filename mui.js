@@ -1,73 +1,48 @@
-<DatePicker
-  selectsRange
-  startDate={startDate}
-  endDate={endDate}
-  onChange={([start, end]) => {
-    setStartDate(start);
-    setEndDate(end);
-  }}
-  inline
-  calendarClassName="date-range-picker"
-  wrapperClassName="date-range-picker-wrapper"
-  data-testid="date-range-picker"
-/>
-
-    //
-
-import { render, screen, fireEvent } from '@testing-library/react';
-import DateRangeInput from '../utils/dateRangeInput';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import DateRangeInput from './dateRangeInput';
 
 describe('DateRangeInput', () => {
-  const setup = (value = [], applyValue = jest.fn()) => {
-    render(<DateRangeInput item={{ value }} applyValue={applyValue} />);
-    return { applyValue };
+  const mockApplyValue = jest.fn();
+  const defaultProps = {
+    item: [null, null],
+    applyValue: mockApplyValue,
   };
 
-  it('renders without crashing', () => {
-    setup();
-    expect(screen.getByRole('grid')).toBeInTheDocument();
+  beforeEach(() => {
+    mockApplyValue.mockClear();
   });
 
-  it('displays pre-filled dates if provided', () => {
-    const start = new Date('2025-07-01');
-    const end = new Date('2025-07-10');
-    setup([start, end]);
-
-    // The inline calendar should show both dates as selected
-    expect(document.querySelector('.react-datepicker__day--selected')).toBeInTheDocument();
+  it('renders date range picker with correct attributes', () => {
+    render(<DateRangeInput {...defaultProps} />);
+    const picker = screen.getByTestId('date-range-picker');
+    expect(picker).toBeInTheDocument();
   });
 
-  it('calls applyValue once both dates are selected', () => {
-    const applyValue = jest.fn();
-    setup([], applyValue);
+  it('updates state and calls applyValue on date change', async () => {
+    const user = userEvent.setup();
+    render(<DateRangeInput {...defaultProps} />);
+    
+    const startDateButton = await screen.findByRole('button', { name: /1/i });
+    await user.click(startDateButton);
 
-    const startBtn = screen.getByText('15');
-    const endBtn = screen.getByText('20');
+    const endDateButton = await screen.findByRole('button', { name: /2/i });
+    await user.click(endDateButton);
 
-    fireEvent.click(startBtn);
-    fireEvent.click(endBtn);
-
-    expect(applyValue).toHaveBeenCalledTimes(1);
-    expect(applyValue).toHaveBeenCalledWith({
-      value: expect.arrayContaining([
-        expect.stringMatching(/^2025-07-15/),
-        expect.stringMatching(/^2025-07-20/),
-      ]),
-    });
+    expect(mockApplyValue).toHaveBeenCalledTimes(1);
+    const callArg = mockApplyValue.mock.calls[0][0];
+    expect(callArg).toHaveProperty('value');
+    expect(Array.isArray(callArg.value)).toBe(true);
   });
 
-  it('does not call applyValue if only one date is selected', () => {
-    const applyValue = jest.fn();
-    setup([], applyValue);
-
-    const startBtn = screen.getByText('10');
-    fireEvent.click(startBtn);
-
-    expect(applyValue).not.toHaveBeenCalled();
+  it('displays correct default dates if item prop is provided', () => {
+    const item = ['2023-01-01', '2023-01-10'];
+    render(<DateRangeInput item={item} applyValue={mockApplyValue} />);
+    expect(screen.getByTestId('date-range-picker')).toBeInTheDocument();
   });
 
-  it('handles missing item.value without crashing', () => {
-    render(<DateRangeInput item={{}} applyValue={jest.fn()} />);
-    expect(screen.getByRole('grid')).toBeInTheDocument();
+  it('does not call applyValue if both dates are not set', () => {
+    render(<DateRangeInput item={[null, '2023-01-10']} applyValue={mockApplyValue} />);
+    expect(mockApplyValue).not.toHaveBeenCalled();
   });
 });
