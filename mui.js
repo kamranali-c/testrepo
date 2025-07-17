@@ -3,21 +3,30 @@ import userEvent from '@testing-library/user-event';
 import DateRangeInput from './dateRangeInput';
 
 describe('DateRangeInput', () => {
-  it('renders without crashing', () => {
+  it('renders the calendar when user interacts', async () => {
     render(<DateRangeInput item={[null, null]} applyValue={jest.fn()} />);
-    expect(screen.getByTestId('date-range-picker')).toBeInTheDocument();
+
+    // Open the calendar by clicking the input
+    const input = screen.getByRole('textbox');
+    await userEvent.click(input);
+
+    // Now we should see the calendar popup by its label
+    const calendar = screen.getByLabelText('Choose Date');
+    expect(calendar).toBeInTheDocument();
   });
 
-  it('calls applyValue after selecting start and end dates', async () => {
-    const user = userEvent.setup();
+  it('calls applyValue after selecting a range', async () => {
     const mockApplyValue = jest.fn();
+    const user = userEvent.setup();
 
     render(<DateRangeInput item={[null, null]} applyValue={mockApplyValue} />);
 
-    // Click two selectable days
-    const dayButtons = await screen.findAllByRole('option');
-    await user.click(dayButtons[0]);
-    await user.click(dayButtons[1]);
+    const input = screen.getByRole('textbox');
+    await user.click(input);
+
+    const days = await screen.findAllByRole('option');
+    await user.click(days[0]);
+    await user.click(days[1]);
 
     expect(mockApplyValue).toHaveBeenCalled();
   });
