@@ -1,109 +1,47 @@
-import * as React from "react";
-import {
-  DataGrid,
-  GridFilterOperator,
-  GridFilterInputValueProps,
-  GridColDef,
-} from "@mui/x-data-grid";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
-import TextField from "@mui/material/TextField";
-import Box from "@mui/material/Box";
-import {
-  randomCreatedDate,
-  randomTraderName,
-  randomUpdatedDate,
-} from "@mui/x-data-grid-generator";
+import { render, screen, fireEvent } from '@testing-library/react';
+import DateRangeInput from './DateRangeInput';
 
-// Custom filter input component
-function DateRangeInput(props: GridFilterInputValueProps) {
-  const { item, applyValue } = props;
-  const [start, setStart] = React.useState<Date | null>(null);
-  const [end, setEnd] = React.useState<Date | null>(null);
-
-  const handleChange = (newStart: Date | null, newEnd: Date | null) => {
-    applyValue({ ...item, value: { start: newStart, end: newEnd } });
+describe('DateRangeInput', () => {
+  const setup = (value = [], applyValue = jest.fn()) => {
+    render(<DateRangeInput item={{ value }} applyValue={applyValue} />);
+    const inputs = screen.getAllByRole('textbox');
+    return { inputs, applyValue };
   };
 
-  React.useEffect(() => {
-    handleChange(start, end);
-  }, [start, end]);
+  it('renders two date input fields', () => {
+    const { inputs } = setup();
+    expect(inputs.length).toBe(2);
+  });
 
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1, p: 1 }}>
-      <DatePicker
-        label="Start"
-        value={start}
-        onChange={(newValue) => setStart(newValue)}
-        renderInput={(params) => <TextField {...params} />}
-      />
-      <DatePicker
-        label="End"
-        value={end}
-        onChange={(newValue) => setEnd(newValue)}
-        renderInput={(params) => <TextField {...params} />}
-      />
-    </Box>
-  );
-}
+  it('displays pre-filled values if provided', () => {
+    const { inputs } = setup(['2025-07-01', '2025-07-10']);
+    expect(inputs[0].value).toBe('2025-07-01');
+    expect(inputs[1].value).toBe('2025-07-10');
+  });
 
-// Custom filter operator
-const dateRangeOperator: GridFilterOperator = {
-  label: "Date range",
-  value: "dateRange",
-  getApplyFilterFn: (filterItem) => {
-    if (
-      !filterItem.value ||
-      (!filterItem.value.start && !filterItem.value.end)
-    ) {
-      return null;
-    }
+  it('calls applyValue when start date is changed', () => {
+    const applyValue = jest.fn();
+    const { inputs } = setup(['2025-07-01', '2025-07-10'], applyValue);
+    fireEvent.change(inputs[0], { target: { value: '2025-07-05' } });
+    expect(applyValue).toHaveBeenCalledWith({ value: ['2025-07-05', '2025-07-10'] });
+  });
 
-    return (params) => {
-      const cellDate = new Date(params.value);
-      const { start, end } = filterItem.value;
-      return (
-        (!start || cellDate >= new Date(start)) &&
-        (!end || cellDate <= new Date(end))
-      );
-    };
-  },
-  InputComponent: DateRangeInput,
-};
+  it('calls applyValue when end date is changed', () => {
+    const applyValue = jest.fn();
+    const { inputs } = setup(['2025-07-01', '2025-07-10'], applyValue);
+    fireEvent.change(inputs[1], { target: { value: '2025-07-15' } });
+    expect(applyValue).toHaveBeenCalledWith({ value: ['2025-07-01', '2025-07-15'] });
+  });
 
-// Columns
-const columns: GridColDef[] = [
-  { field: "name", headerName: "Name", width: 180 },
-  { field: "age", headerName: "Age", type: "number", width: 100 },
-  {
-    field: "dateCreated",
-    headerName: "Date Created",
-    width: 200,
-    type: "date",
-    filterOperators: [dateRangeOperator],
-  },
-];
+  it('handles empty initial value gracefully', () => {
+    const { inputs } = setup(undefined);
+    expect(inputs[0].value).toBe('');
+    expect(inputs[1].value).toBe('');
+  });
 
-// Rows
-const rows = Array.from({ length: 10 }, (_, id) => ({
-  id,
-  name: randomTraderName(),
-  age: 20 + Math.floor(Math.random() * 20),
-  dateCreated: randomCreatedDate(),
-  lastLogin: randomUpdatedDate(),
-}));
-
-export default function GridWithDateRangeFilter() {
-  return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <div style={{ height: 500, width: "100%" }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          filterMode="client"
-          disableColumnFilter={false}
-        />
-      </div>
-    </LocalizationProvider>
-  );
-}
+  it('still renders if no item prop is passed', () => {
+    render(<DateRangeInput applyValue={jest.fn()} />);
+    const inputs = screen.getAllByRole('textbox');
+    expect(inputs.length).toBe(2);
+  });
+});
