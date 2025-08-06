@@ -1,29 +1,31 @@
-import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import DateRangeInput from "./DateRangeInput";
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy import inspect
 
-it("should output dates in yyyy-mm-dd", async () => {
-  const applyValue = jest.fn();
-  const item = [];
+def upgrade() -> None:
+    """Upgrade schema."""
+    conn = op.get_bind()
+    columns = [c['name'] for c in inspect(conn).get_columns('incident_requests')]
+    print("🔍 Existing columns in 'incident_requests':", columns)
 
-  render(<DateRangeInput item={item} applyValue={applyValue} />);
+    if 'majorIncidentState' not in columns:
+        print("➕ Adding column 'majorIncidentState'...")
+        op.add_column(
+            'incident_requests',
+            sa.Column('majorIncidentState', sa.String(), server_default='unprocessed', nullable=False)
+        )
+    else:
+        print("⚠️ Column 'majorIncidentState' already exists — skipping.")
 
-  const user = userEvent.setup();
 
-  const startDay = document.querySelector(".react-datepicker__day--001");
-  expect(startDay).toBeInTheDocument();
-  if (startDay) await user.click(startDay);
+def downgrade() -> None:
+    """Downgrade schema."""
+    conn = op.get_bind()
+    columns = [c['name'] for c in inspect(conn).get_columns('incident_requests')]
+    print("🔍 Existing columns before downgrade:", columns)
 
-  const endDay = document.querySelector(".react-datepicker__day--002");
-  expect(endDay).toBeInTheDocument();
-  if (endDay) await user.click(endDay);
-
-  await waitFor(() => {
-    expect(applyValue).toHaveBeenCalledWith(
-      expect.objectContaining({
-        value: "2025-07-02:2025-07-03",
-      })
-    );
-  });
-});
+    if 'majorIncidentState' in columns:
+        print("🗑️ Dropping column 'majorIncidentState'...")
+        op.drop_column('incident_requests', 'majorIncidentState')
+    else:
+        print("⚠️ Column 'majorIncidentState' not found — nothing to drop.")
