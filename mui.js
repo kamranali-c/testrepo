@@ -1,14 +1,12 @@
-from alembic import op
-import sqlalchemy as sa
-
-def upgrade() -> None:
-    with op.batch_alter_table('incident_requests', schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column('majorIncidentState', sa.String(), nullable=True, server_default='unprocessed')
-        )
-    print("✅ Added column 'majorIncidentState' via batch_alter_table")
-
-def downgrade() -> None:
-    with op.batch_alter_table('incident_requests', schema=None) as batch_op:
-        batch_op.drop_column('majorIncidentState')
-    print("🗑️ Dropped column 'majorIncidentState'")
+const convertKeysToCamelCase = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map(convertKeysToCamelCase);
+  } else if (obj !== null && typeof obj === "object") {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      const camelKey = toCamelCase(key);
+      acc[camelKey] = convertKeysToCamelCase(value);
+      return acc;
+    }, {});
+  }
+  return obj;
+};
