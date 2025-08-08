@@ -1,13 +1,3 @@
-const REQUIRED_FIELDS = {
-  number: "notBlank",
-  incidentStartTime: "notBlank",
-  priority: "notBlank",
-  severity: "numeric",
-  assignmentGroup: "notBlank",
-  shortDescription: "notBlank",
-  description: "notBlank",
-  businessImpact: "numeric"
-};
 
 export const validateMandatoryColumns = (jsonData) => {
   const errors = [];
@@ -27,7 +17,26 @@ export const validateMandatoryColumns = (jsonData) => {
   });
 
   if (errors.length > 0) {
-    throw new Error(`Validation failed:\n${errors.join("\n")}`);
+    const grouped = {};
+
+    errors.forEach((error) => {
+      const match = error.match(/Row (\d+): (.+)/);
+      if (match) {
+        const row = match[1];
+        const message = match[2];
+
+        if (!grouped[message]) {
+          grouped[message] = [];
+        }
+        grouped[message].push(row);
+      }
+    });
+
+    const summary = Object.entries(grouped).map(
+      ([message, rows]) => `- ${message} in rows: ${rows.join(", ")}`
+    );
+
+    throw new Error(`Validation failed:\n${summary.join("\n")}`);
   }
 
   return true;
