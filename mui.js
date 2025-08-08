@@ -1,55 +1,58 @@
-function groupRowsIntoRanges(rows) {
-  const sorted = [...new Set(rows.map(Number))].sort((a, b) => a - b);
-  const ranges = [];
-  let start = sorted[0];
-  let end = sorted[0];
+// validateMandatoryColumns.test.js
+import { validateMandatoryColumns } from './path-to-your-file';
 
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] === end + 1) {
-      end = sorted[i];
-    } else {
-      ranges.push(start === end ? `${start}` : `${start}–${end}`);
-      start = sorted[i];
-      end = sorted[i];
-    }
-  }
-  ranges.push(start === end ? `${start}` : `${start}–${end}`);
-  return ranges.join(", ");
-}
+describe('validateMandatoryColumns', () => {
+  const requiredFields = {
+    name: 'notBlank',
+    age: 'numeric'
+  };
 
-export const validateMandatoryColumns = (jsonData) => {
-  const errors = [];
-
-  jsonData?.forEach((row, rowIndex) => {
-    Object.entries(REQUIRED_FIELDS).forEach(([field, rule]) => {
-      const value = row[field];
-
-      if (rule === "notBlank" && (!value || value.toString().trim() === "")) {
-        errors.push({ field, message: `${field} is blank`, row: rowIndex + 1 });
-      }
-
-      if (rule === "numeric" && (value === undefined || isNaN(Number(value)))) {
-        errors.push({ field, message: `${field} must be numeric`, row: rowIndex + 1 });
-      }
-    });
+  it('should return true when all rules are satisfied', () => {
+    const data = [
+      { name: 'Alice', age: 25 },
+      { name: 'Bob', age: 30 }
+    ];
+    expect(validateMandatoryColumns(data, requiredFields)).toBe(true);
   });
 
-  if (errors.length > 0) {
-    const grouped = {};
+  it('should throw when notBlank field is empty', () => {
+    const data = [
+      { name: '', age: 25 }
+    ];
+    expect(() =>
+      validateMandatoryColumns(data, requiredFields)
+    ).toThrowError(/name is blank/);
+  });
 
-    errors.forEach(({ message, row }) => {
-      if (!grouped[message]) {
-        grouped[message] = [];
-      }
-      grouped[message].push(row);
-    });
+  it('should throw when numeric field is not a number', () => {
+    const data = [
+      { name: 'Alice', age: 'abc' }
+    ];
+    expect(() =>
+      validateMandatoryColumns(data, requiredFields)
+    ).toThrowError(/age must be numeric or blank/);
+  });
 
-    const summary = Object.entries(grouped).map(
-      ([message, rows]) => `- ${message} in rows: ${groupRowsIntoRanges(rows)}`
-    );
+  it('should throw grouped errors for multiple rows', () => {
+    const data = [
+      { name: '', age: 'abc' },
+      { name: '', age: 20 },
+      { name: 'Charlie', age: 'xyz' }
+    ];
 
-    throw new Error(`Validation failed:\n${summary.join("\n")}`);
-  }
+    try {
+      validateMandatoryColumns(data, requiredFields);
+    } catch (err) {
+      expect(err.message).toMatch(/name is blank/);
+      expect(err.message).toMatch(/age must be numeric or blank/);
+      expect(err.message).toMatch(/rows:/); // grouped message output
+    }
+  });
 
-  return true;
-};
+  it('should allow numeric field to be blank', () => {
+    const data = [
+      { name: 'Alice', age: '' } // numeric but blank allowed
+    ];
+    expect(validateMandatoryColumns(data, requiredFields)).toBe(true);
+  });
+});
