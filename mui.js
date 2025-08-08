@@ -1,3 +1,21 @@
+function groupRowsIntoRanges(rows) {
+  const sorted = [...new Set(rows.map(Number))].sort((a, b) => a - b);
+  const ranges = [];
+  let start = sorted[0];
+  let end = sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) {
+      end = sorted[i];
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}–${end}`);
+      start = sorted[i];
+      end = sorted[i];
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}–${end}`);
+  return ranges.join(", ");
+}
 
 export const validateMandatoryColumns = (jsonData) => {
   const errors = [];
@@ -7,11 +25,11 @@ export const validateMandatoryColumns = (jsonData) => {
       const value = row[field];
 
       if (rule === "notBlank" && (!value || value.toString().trim() === "")) {
-        errors.push(`Row ${rowIndex + 1}: ${field} is blank`);
+        errors.push({ field, message: `${field} is blank`, row: rowIndex + 1 });
       }
 
       if (rule === "numeric" && (value === undefined || isNaN(Number(value)))) {
-        errors.push(`Row ${rowIndex + 1}: ${field} must be numeric`);
+        errors.push({ field, message: `${field} must be numeric`, row: rowIndex + 1 });
       }
     });
   });
@@ -19,21 +37,15 @@ export const validateMandatoryColumns = (jsonData) => {
   if (errors.length > 0) {
     const grouped = {};
 
-    errors.forEach((error) => {
-      const match = error.match(/Row (\d+): (.+)/);
-      if (match) {
-        const row = match[1];
-        const message = match[2];
-
-        if (!grouped[message]) {
-          grouped[message] = [];
-        }
-        grouped[message].push(row);
+    errors.forEach(({ message, row }) => {
+      if (!grouped[message]) {
+        grouped[message] = [];
       }
+      grouped[message].push(row);
     });
 
     const summary = Object.entries(grouped).map(
-      ([message, rows]) => `- ${message} in rows: ${rows.join(", ")}`
+      ([message, rows]) => `- ${message} in rows: ${groupRowsIntoRanges(rows)}`
     );
 
     throw new Error(`Validation failed:\n${summary.join("\n")}`);
